@@ -24,6 +24,7 @@ import org.bitcoinj.core.BloomFilter;
 import org.bitcoinj.core.ECKey;
 import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.core.Utils;
+import org.bitcoinj.crypto.ChildNumber;
 import org.bitcoinj.crypto.DeterministicKey;
 import org.bitcoinj.crypto.KeyCrypter;
 import org.bitcoinj.script.Script;
@@ -66,8 +67,14 @@ public class MarriedKeyChain extends DeterministicKeyChain {
     public static class Builder<T extends Builder<T>> extends DeterministicKeyChain.Builder<T> {
         private List<DeterministicKey> followingKeys;
         private int threshold;
+        private ImmutableList<ChildNumber> accountPath;
 
         protected Builder() {
+        }
+        
+        public T accountPath(ImmutableList<ChildNumber> path) {
+            this.accountPath = path;
+            return self();
         }
 
         public T followingKeys(List<DeterministicKey> followingKeys) {
@@ -103,8 +110,8 @@ public class MarriedKeyChain extends DeterministicKeyChain {
             } else if (entropy != null) {
                 chain = new MarriedKeyChain(entropy, getPassphrase(), seedCreationTimeSecs);
             } else if (seed != null) {
-                seed.setCreationTimeSeconds(seedCreationTimeSecs);
-                chain = new MarriedKeyChain(seed);
+                seed.setCreationTimeSeconds(seedCreationTimeSecs);                
+                chain = accountPath == null ? new MarriedKeyChain(seed) : new MarriedKeyChain(seed, accountPath);
             } else {
                 watchingKey.setCreationTimeSeconds(seedCreationTimeSecs);
                 chain = new MarriedKeyChain(watchingKey);
@@ -139,7 +146,9 @@ public class MarriedKeyChain extends DeterministicKeyChain {
     private MarriedKeyChain(DeterministicSeed seed) {
         super(seed);
     }
-
+    private MarriedKeyChain(DeterministicSeed seed, ImmutableList<ChildNumber> accountPath) {
+        super(seed, accountPath);
+    }
     void setFollowingKeyChains(List<DeterministicKeyChain> followingKeyChains) {
         checkArgument(!followingKeyChains.isEmpty());
         this.followingKeyChains = followingKeyChains;
